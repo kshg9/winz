@@ -12,6 +12,11 @@ function Write-Step($msg) { Write-Host "==> $msg" -ForegroundColor Cyan }
 function Write-Ok($msg)   { Write-Host "  ✓ $msg" -ForegroundColor Green }
 function Write-Fail($msg) { Write-Host "  ✗ $msg" -ForegroundColor Red; exit 1 }
 
+# ── 2. Set execution policy (current user only, no admin) ─────────────────────
+Write-Step "Setting execution policy..."
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
+Write-Ok "Execution policy set (CurrentUser only)"
+
 # ── 1. Fetch latest release info from GitHub API ──────────────────────────────
 Write-Step "Fetching latest release..."
 try {
@@ -24,11 +29,6 @@ $asset = $release.assets | Where-Object { $_.name -like "*windows*amd64*" -or $_
 if (-not $asset) { Write-Fail "No Windows binary found in latest release assets." }
 
 Write-Ok "Found: $($asset.name) (release $($release.tag_name))"
-
-# ── 2. Set execution policy (current user only, no admin) ─────────────────────
-Write-Step "Setting execution policy..."
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
-Write-Ok "Execution policy set (CurrentUser only)"
 
 # ── 3. Download binary ────────────────────────────────────────────────────────
 Write-Step "Downloading binary..."
