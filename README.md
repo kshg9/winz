@@ -31,7 +31,7 @@ tool init bi_lab/exp1_schema_design ./my-bi-exp
 
 - `list`: print all available embedded template paths.
 - `init`: generate template files into the target directory (or the template basename by default).
-- `tui`: open the minimal interactive picker with two modes: normal navigation (`j/k`) and search mode (`f` to enter, `esc` to exit). Large template sets are windowed so only a slice is rendered on-screen while you scroll.
+- `tui`: open the minimal interactive picker with fuzzy search.
 - `uninstall`: run existing platform uninstall behavior.
 
 ## Embedded Template Layout
@@ -46,10 +46,20 @@ internal/templates/
       ...any files/folders
 ```
 
-The CLI auto-detects templates without additional code changes. It discovers top-level experiment roots that contain files, so subject folders can hold many experiments (including deeper paths like `web_lab/angular/exp_component`).
+The CLI auto-detects templates without additional code changes.
 
 ## Rendering Rules
 
 - Files ending in `.tmpl` are rendered and written without the `.tmpl` suffix.
 - All other files are copied as-is.
 - On Windows, generated files are normalized to CRLF newlines.
+
+## Included 6th Semester IT Lab Dummy Templates
+
+- `bi_lab/exp1_schema_design`
+- `web_lab/exp_typescript_basic`
+- `sensor_lab/exp_sensor_interface`
+- `mad_pwa_lab/exp_flutter_ui`
+- `ds_python_lab/exp_numpy_pandas`
+- `rest_api_lab/exp_go_rest_api`
+- `dummy_exercise`

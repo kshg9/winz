@@ -1,7 +1,6 @@
 package filesystem
 
 import (
-	"bytes"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -13,9 +12,9 @@ func EnsureDir(path string) error {
 	return os.MkdirAll(path, 0o755)
 }
 
-// NormalizeNewlines converts LF line endings to CRLF on Windows for text-like files.
-func NormalizeNewlines(path string, content []byte) []byte {
-	if runtime.GOOS != "windows" || !shouldNormalize(path, content) {
+// NormalizeNewlines converts LF line endings to CRLF on Windows.
+func NormalizeNewlines(content []byte) []byte {
+	if runtime.GOOS != "windows" {
 		return content
 	}
 
@@ -24,26 +23,13 @@ func NormalizeNewlines(path string, content []byte) []byte {
 	return []byte(s)
 }
 
-func shouldNormalize(path string, content []byte) bool {
-	if bytes.IndexByte(content, 0x00) >= 0 {
-		return false
-	}
-
-	switch strings.ToLower(filepath.Ext(path)) {
-	case ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp", ".ico", ".pdf", ".zip", ".gz", ".jar", ".exe", ".dll", ".so", ".ttf", ".woff", ".woff2", ".mp3", ".mp4":
-		return false
-	default:
-		return true
-	}
-}
-
 // WriteFileSafe writes content atomically after ensuring parent directories exist.
 func WriteFileSafe(path string, content []byte, perm os.FileMode) error {
 	if err := EnsureDir(filepath.Dir(path)); err != nil {
 		return err
 	}
 
-	normalized := NormalizeNewlines(path, content)
+	normalized := NormalizeNewlines(content)
 	tmp := path + ".tmp"
 	if err := os.WriteFile(tmp, normalized, perm); err != nil {
 		return err

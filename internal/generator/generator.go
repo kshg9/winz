@@ -26,7 +26,6 @@ func New(templates fs.FS) *Generator {
 }
 
 // ListTemplates returns all available template paths.
-// A template is the top-most directory containing files under internal/templates.
 func (g *Generator) ListTemplates() ([]string, error) {
 	candidates := map[string]bool{}
 
@@ -34,10 +33,9 @@ func (g *Generator) ListTemplates() ([]string, error) {
 		if err != nil {
 			return err
 		}
-		if d.IsDir() {
+		if d.IsDir() || path.Base(p) != "README.md" {
 			return nil
 		}
-
 		dir := path.Dir(p)
 		rel := strings.TrimPrefix(dir, templatesRoot+"/")
 		if rel != "" {
@@ -49,23 +47,12 @@ func (g *Generator) ListTemplates() ([]string, error) {
 		return nil, err
 	}
 
-	// Keep only top-most directories so nested asset folders aren't listed as templates.
-	final := make([]string, 0, len(candidates))
+	out := make([]string, 0, len(candidates))
 	for name := range candidates {
-		isNested := false
-		for ancestor := path.Dir(name); ancestor != "." && ancestor != "/"; ancestor = path.Dir(ancestor) {
-			if candidates[ancestor] {
-				isNested = true
-				break
-			}
-		}
-		if !isNested {
-			final = append(final, name)
-		}
+		out = append(out, name)
 	}
-
-	sort.Strings(final)
-	return final, nil
+	sort.Strings(out)
+	return out, nil
 }
 
 // Generate copies the selected template into targetPath.
