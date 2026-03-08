@@ -34,6 +34,9 @@ func (m model) Init() tea.Cmd { return nil }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.windowHeight = msg.Height
+		return m, nil
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+c", "q":
@@ -99,6 +102,8 @@ func (m *model) refilter() {
 		if s >= 0 {
 			matches = append(matches, scored{name: item, score: s})
 		}
+		score += idx + next
+		idx += next + 1
 	}
 
 	sort.Slice(matches, func(i, j int) bool {
