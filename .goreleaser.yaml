@@ -1,0 +1,48 @@
+# .goreleaser.yaml
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: demotool
+    binary: demotool
+    goos:
+      - windows
+      - linux
+    goarch:
+      - amd64
+      - "386"
+    env:
+      - CGO_ENABLED=0
+    ldflags:
+      # Strip debug info → smaller binary
+      - -s -w
+      # Bake version info into the binary
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+
+archives:
+  - id: default
+    # bare binary, no zip — makes the install.ps1 simpler
+    format: binary
+    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+
+release:
+  github:
+    owner: yourusername
+    name: winz
+  # draft: true   ← uncomment if you want to review before publishing
