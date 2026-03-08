@@ -1,0 +1,3 @@
+app:
+  name: exp_go_rest_api
+  port: 8080

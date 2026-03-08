@@ -1,67 +1,70 @@
 package main
 
-import "github.com/charmbracelet/lipgloss"
+import (
+	"fmt"
+	"strings"
+
+	"github.com/charmbracelet/lipgloss"
+)
 
 var (
-	titleStyle = lipgloss.NewStyle().
-			Bold(true).
-			Foreground(lipgloss.Color("#FAFAFA")).
-			Background(lipgloss.Color("#7B2FBE")).
-			Padding(0, 2).
-			MarginBottom(1)
-
-	selectedStyle = lipgloss.NewStyle().
-			Bold(true).
-			Foreground(lipgloss.Color("#7B2FBE")).
-			PaddingLeft(2)
-
-	descStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#666666")).
-			PaddingLeft(6)
-
-	normalStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#AAAAAA")).
-			PaddingLeft(4)
-
-	resultStyle = lipgloss.NewStyle().
-			Bold(true).
-			Foreground(lipgloss.Color("#04B575")).
-			PaddingLeft(2).
-			MarginTop(1)
-
-	dangerStyle = lipgloss.NewStyle().
-			Bold(true).
-			Foreground(lipgloss.Color("#FF5F57")).
-			PaddingLeft(2).
-			MarginTop(1)
-
-	hintStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#555555")).
-			MarginTop(1).
-			PaddingLeft(2)
+	titleStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FAFAFA")).Background(lipgloss.Color("#7B2FBE")).Padding(0, 2)
+	subStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#888")).MarginBottom(1)
+	selected   = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#7B2FBE"))
+	normal     = lipgloss.NewStyle().Foreground(lipgloss.Color("#BDBDBD"))
+	hint       = lipgloss.NewStyle().Foreground(lipgloss.Color("#666")).MarginTop(1)
+	success    = lipgloss.NewStyle().Foreground(lipgloss.Color("#04B575")).MarginTop(1)
+	errorStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5F57")).MarginTop(1)
+	modeStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("#9D7CD8")).Bold(true)
 )
 
 func (m model) View() string {
-	s := titleStyle.Render("  demotool  ") + "\n\n"
+	if m.quitting {
+		return "bye\n"
+	}
 
-	for i, opt := range options {
-		if m.cursor == i {
-			s += selectedStyle.Render("▶ "+opt.label) + "\n"
-			s += descStyle.Render(opt.desc) + "\n"
-		} else {
-			s += normalStyle.Render("  "+opt.label) + "\n"
+	modeText := "NORMAL"
+	if m.mode == modeSearch {
+		modeText = "SEARCH"
+	}
+
+	var b strings.Builder
+	b.WriteString(titleStyle.Render(" " + appName + " "))
+	b.WriteString("\n")
+	b.WriteString(subStyle.Render(subtitle + "  •  " + modeStyle.Render(modeText)))
+	b.WriteString("\n")
+	b.WriteString(fmt.Sprintf("Search: %s\n\n", m.query))
+
+	if len(m.filtered) == 0 {
+		b.WriteString(normal.Render("  no matches"))
+		b.WriteString("\n")
+	} else {
+		start, end := m.visibleRange()
+		for i := start; i < end; i++ {
+			item := m.filtered[i]
+			line := "  " + item
+			if i == m.cursor {
+				b.WriteString(selected.Render("▶ " + item))
+			} else {
+				b.WriteString(normal.Render(line))
+			}
+			b.WriteString("\n")
+		}
+		if len(m.filtered) > (end - start) {
+			b.WriteString(subStyle.Render(fmt.Sprintf("showing %d-%d of %d", start+1, end, len(m.filtered))))
+			b.WriteString("\n")
 		}
 	}
 
-	if m.result != "" {
-		if m.isDanger {
-			s += dangerStyle.Render("⚠  "+m.result) + "\n"
+	if m.status != "" {
+		if m.statusErr {
+			b.WriteString(errorStyle.Render("⚠ " + m.status))
 		} else {
-			s += resultStyle.Render("→  "+m.result) + "\n"
+			b.WriteString(success.Render("✓ " + m.status))
 		}
+		b.WriteString("\n")
 	}
 
-	s += hintStyle.Render("j/k  ↑/↓  move   •   g/G  top/bottom   •   enter  select   •   q  quit")
-
-	return s
+	b.WriteString(hint.Render("normal: j/k navigate • enter init • f search • q quit | search: type • esc normal"))
+	return b.String()
 }
