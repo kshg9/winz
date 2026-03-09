@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"path"
 	"sort"
 	"strings"
 
@@ -16,9 +17,6 @@ const (
 	modeSearch
 )
 
-// model represents the state of the TUI.  We track a handful of fields
-// used by the bubbletea engine, plus the list of available templates and
-// what subset of them the user can currently see.
 type model struct {
 	generator    *generator.Generator
 	all          []string
@@ -49,78 +47,87 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.windowHeight = msg.Height
 		return m, nil
-	case tea.KeyMsg:
-		// handle search mode transitions first
-		if m.mode == modeNormal {
-			switch msg.String() {
-			case "f":
-				m.mode = modeSearch
-				m.query = ""
-				m.filtered = append([]string(nil), m.all...)
-				m.cursor = 0
-				return m, nil
-			}
-		} else if m.mode == modeSearch {
-			if msg.Type == tea.KeyEsc {
-				m.mode = modeNormal
-				m.query = ""
-				m.filtered = append([]string(nil), m.all...)
-				m.cursor = 0
-				return m, nil
-			}
-		}
 
-		switch msg.String() {
-		case "ctrl+c":
-			// always quit regardless of mode
+	case tea.KeyMsg:
+		// 1. Global shortcuts (always active)
+		switch msg.Type {
+		case tea.KeyCtrlC:
 			m.quitting = true
 			return m, tea.Quit
-		case "q":
-			// only quit in normal mode
-			if m.mode == modeNormal {
-				m.quitting = true
-				return m, tea.Quit
-			}
-			if m.mode == modeSearch && msg.Type == tea.KeyRunes {
-				m.query += msg.String()
-				m.refilter()
-			}
-		case "j", "down":
-			if m.cursor < len(m.filtered)-1 {
-				m.cursor++
-			}
-		case "k", "up":
-			if m.cursor > 0 {
-				m.cursor--
-			}
-		case "g", "home":
-			m.cursor = 0
-		case "G", "end":
-			if len(m.filtered) > 0 {
-				m.cursor = len(m.filtered) - 1
-			}
-		case "backspace":
-			if len(m.query) > 0 {
-				m.query = m.query[:len(m.query)-1]
-				m.refilter()
-			}
-		case "enter":
+		case tea.KeyEnter:
 			if len(m.filtered) == 0 {
 				return m, nil
 			}
 			selected := m.filtered[m.cursor]
-			target := lastPathSegment(selected)
+			// Replaced custom function with standard library
+			target := path.Base(selected)
+
 			if err := m.generator.Generate(selected, target); err != nil {
 				m.status = err.Error()
 				m.statusErr = true
 			} else {
-				m.status = fmt.Sprintf("initialized %s in %s", selected, target)
+				m.status = fmt.Sprintf("initialized %s in ./%s", selected, target)
 				m.statusErr = false
+				// Optional: auto-quit after successful generation
+				m.quitting = true
+				return m, tea.Quit
 			}
-		default:
-			if m.mode == modeSearch && msg.Type == tea.KeyRunes {
+			return m, nil
+		}
+
+		// 2. Mode-specific handling
+		switch m.mode {
+		case modeNormal:
+			switch msg.String() {
+			case "q":
+				m.quitting = true
+				return m, tea.Quit
+			case "f", "/": // '/' is a very common standard for search
+				m.mode = modeSearch
+				m.query = ""
+				m.refilter()
+			case "j", "down":
+				if m.cursor < len(m.filtered)-1 {
+					m.cursor++
+				}
+			case "k", "up":
+				if m.cursor > 0 {
+					m.cursor--
+				}
+			case "g", "home":
+				m.cursor = 0
+			case "G", "end":
+				if len(m.filtered) > 0 {
+					m.cursor = len(m.filtered) - 1
+				}
+			}
+		case modeSearch:
+			// Check specific types first
+			switch msg.Type {
+			case tea.KeyEsc:
+				m.mode = modeNormal
+				m.query = ""
+				m.refilter()
+			case tea.KeyUp:
+				if m.cursor > 0 {
+					m.cursor--
+				}
+			case tea.KeyDown:
+				if m.cursor < len(m.filtered)-1 {
+					m.cursor++
+				}
+			case tea.KeyRunes:
 				m.query += msg.String()
 				m.refilter()
+			default:
+				// Fallback to string checking for backspace to handle terminal quirks
+				// TIL interesting story of backspace quirks
+				if msg.String() == "backspace" {
+					if len(m.query) > 0 {
+						m.query = m.query[:len(m.query)-1]
+						m.refilter()
+					}
+				}
 			}
 		}
 	}
@@ -147,6 +154,7 @@ func (m *model) refilter() {
 		}
 	}
 
+	// Tie breaker
 	sort.Slice(matches, func(i, j int) bool {
 		if matches[i].score == matches[j].score {
 			return matches[i].name < matches[j].name
@@ -158,11 +166,10 @@ func (m *model) refilter() {
 	for _, match := range matches {
 		m.filtered = append(m.filtered, match.name)
 	}
+
+	// Ensure cursor stays within bounds after filtering
 	if m.cursor >= len(m.filtered) {
-		m.cursor = len(m.filtered) - 1
-	}
-	if m.cursor < 0 {
-		m.cursor = 0
+		m.cursor = max(0, len(m.filtered)-1)
 	}
 }
 
@@ -178,9 +185,4 @@ func fuzzyScore(item, query string) int {
 		idx += next + 1
 	}
 	return score
-}
-
-func lastPathSegment(s string) string {
-	parts := strings.Split(s, "/")
-	return parts[len(parts)-1]
 }

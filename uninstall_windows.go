@@ -5,6 +5,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 )
 
@@ -73,4 +74,9 @@ func removeFromPath(dir string) {
 
 	newPath := strings.Join(filtered, ";")
 	runCmd("reg", "add", key, "/v", "PATH", "/t", "REG_EXPAND_SZ", "/d", newPath, "/f") //nolint
+}
+
+func runCmd(name string, args ...string) (string, error) {
+	out, err := exec.Command(name, args...).CombinedOutput()
+	return strings.TrimSpace(string(out)), err
 }
