@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"strings"
 )
 
 func runUninstall() {
@@ -16,16 +15,14 @@ func runUninstall() {
 		return
 	}
 
-	// Strip install dir from user PATH
-	installDir := exe[:strings.LastIndex(exe, `\`)]
-	removeFromPath(installDir)
-
-	// Remove the binary itself (Windows won't let you delete a running exe,
-	// so we schedule deletion on next reboot via a temp batch file)
-	batchPath := os.TempDir() + `\demotool_uninstall.bat`
+	// Create the self-destruct batch file
+	batchPath := os.TempDir() + `\winz_uninstall.bat`
 	batch := fmt.Sprintf(`@echo off
+:: Wait 2 seconds for the Go program to fully exit
 ping -n 2 127.0.0.1 > nul
+:: Delete the executable
 del /f /q "%s"
+:: Delete this batch file itself
 del /f /q "%%~f0"
 `, exe)
 
@@ -34,49 +31,14 @@ del /f /q "%%~f0"
 		return
 	}
 
-	// Launch the batch detached so it runs after we exit
-	// (uses cmd /c start so it doesn't block)
-	fmt.Println("demotool removed from PATH.")
-	fmt.Println("Binary will be deleted on next login.")
-}
-
-func removeFromPath(dir string) {
-	key := `HKCU\Environment`
-	// Read current user PATH via reg query
-	out, err := runCmd("reg", "query", key, "/v", "PATH")
-	if err != nil {
+	// Actually LAUNCH the batch file detached so it runs in the background
+	cmd := exec.Command("cmd.exe", "/C", "start", "/b", batchPath)
+	if err := cmd.Start(); err != nil {
+		fmt.Println("failed to start uninstaller:", err)
 		return
 	}
 
-	// Parse the value out of reg query output
-	lines := strings.Split(out, "\n")
-	var currentPath string
-	for _, l := range lines {
-		if strings.Contains(l, "PATH") && strings.Contains(l, `\`) {
-			parts := strings.SplitN(strings.TrimSpace(l), "    ", 3)
-			if len(parts) == 3 {
-				currentPath = strings.TrimSpace(parts[2])
-			}
-		}
-	}
-
-	if currentPath == "" {
-		return
-	}
-
-	parts := strings.Split(currentPath, ";")
-	filtered := parts[:0]
-	for _, p := range parts {
-		if strings.TrimSpace(p) != dir {
-			filtered = append(filtered, p)
-		}
-	}
-
-	newPath := strings.Join(filtered, ";")
-	runCmd("reg", "add", key, "/v", "PATH", "/t", "REG_EXPAND_SZ", "/d", newPath, "/f") //nolint
-}
-
-func runCmd(name string, args ...string) (string, error) {
-	out, err := exec.Command(name, args...).CombinedOutput()
-	return strings.TrimSpace(string(out)), err
+	fmt.Println("Winz has been uninstalled. The binary will be deleted in a few seconds.")
+	// Exit immediately so the batch file can delete the unlocked .exe
+	os.Exit(0)
 }
