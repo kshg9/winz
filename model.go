@@ -9,15 +9,27 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+type mode int
+
+const (
+	modeNormal mode = iota
+	modeSearch
+)
+
+// model represents the state of the TUI.  We track a handful of fields
+// used by the bubbletea engine, plus the list of available templates and
+// what subset of them the user can currently see.
 type model struct {
-	generator *generator.Generator
-	all       []string
-	filtered  []string
-	cursor    int
-	query     string
-	status    string
-	statusErr bool
-	quitting  bool
+	generator    *generator.Generator
+	all          []string
+	filtered     []string
+	cursor       int
+	query        string
+	status       string
+	statusErr    bool
+	quitting     bool
+	windowHeight int
+	mode         mode
 }
 
 func initialModel(g *generator.Generator) model {
@@ -38,10 +50,41 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.windowHeight = msg.Height
 		return m, nil
 	case tea.KeyMsg:
+		// handle search mode transitions first
+		if m.mode == modeNormal {
+			switch msg.String() {
+			case "f":
+				m.mode = modeSearch
+				m.query = ""
+				m.filtered = append([]string(nil), m.all...)
+				m.cursor = 0
+				return m, nil
+			}
+		} else if m.mode == modeSearch {
+			if msg.Type == tea.KeyEsc {
+				m.mode = modeNormal
+				m.query = ""
+				m.filtered = append([]string(nil), m.all...)
+				m.cursor = 0
+				return m, nil
+			}
+		}
+
 		switch msg.String() {
-		case "ctrl+c", "q":
+		case "ctrl+c":
+			// always quit regardless of mode
 			m.quitting = true
 			return m, tea.Quit
+		case "q":
+			// only quit in normal mode
+			if m.mode == modeNormal {
+				m.quitting = true
+				return m, tea.Quit
+			}
+			if m.mode == modeSearch && msg.Type == tea.KeyRunes {
+				m.query += msg.String()
+				m.refilter()
+			}
 		case "j", "down":
 			if m.cursor < len(m.filtered)-1 {
 				m.cursor++
@@ -75,7 +118,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.statusErr = false
 			}
 		default:
-			if msg.Type == tea.KeyRunes {
+			if m.mode == modeSearch && msg.Type == tea.KeyRunes {
 				m.query += msg.String()
 				m.refilter()
 			}
@@ -102,8 +145,6 @@ func (m *model) refilter() {
 		if s >= 0 {
 			matches = append(matches, scored{name: item, score: s})
 		}
-		score += idx + next
-		idx += next + 1
 	}
 
 	sort.Slice(matches, func(i, j int) bool {

@@ -29,4 +29,7 @@ func TestSearchModeKeyHandling(t *testing.T) {
 	if m3.mode != modeNormal {
 		t.Fatalf("expected esc to return to normal mode")
 	}
+	if m3.query != "" {
+		t.Fatalf("expected query to be reset when leaving search mode, got %q", m3.query)
+	}
 }
