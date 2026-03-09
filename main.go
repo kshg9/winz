@@ -96,7 +96,7 @@ func runCLI(g *generator.Generator, args []string) error {
 		return nil
 
 	default:
-		return fmt.Errorf("unknown command %q (available: list, init, tui, uninstall)", args[0])
+		return fmt.Errorf("unknown command %q (available: list, init, uninstall)", args[0])
 	}
 }
 
