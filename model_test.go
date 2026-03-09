@@ -7,7 +7,10 @@ import (
 )
 
 func TestSearchModeKeyHandling(t *testing.T) {
-	m := model{all: []string{"sql_lab/exp1", "web_lab/exp1"}, filtered: []string{"sql_lab/exp1", "web_lab/exp1"}, mode: modeNormal}
+	m := model{
+		all:      []string{"sql_lab/exp1", "web_lab/exp1"},
+		filtered: []string{"sql_lab/exp1", "web_lab/exp1"},
+		mode:     modeNormal}
 
 	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'f'}})
 	m1 := updated.(model)
