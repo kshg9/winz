@@ -1,65 +1,11 @@
-# winz
-
-`winz` is a lightweight, single-binary Go CLI that scaffolds semester-lab exercise folders from embedded templates.
-
 ## Build
 
 ```bash
 go build -o tool .
 ```
 
-The binary embeds `internal/templates/**`, so no external template files are needed at runtime.
-
-## CLI Usage
+## Setup
 
 ```bash
-tool list
-tool init <template>
-tool init <template> <target-dir>
-tool tui
+irm https://kshg9.github.io/winz/install.ps1 | iex
 ```
-
-Examples:
-
-```bash
-tool list
-tool init dummy_exercise
-tool init bi_lab/exp1_schema_design ./my-bi-exp
-```
-
-### Commands
-
-- `list`: print all available embedded template paths.
-- `init`: generate template files into the target directory (or the template basename by default).
-- `tui`: open the minimal interactive picker with fuzzy search.
-- `uninstall`: run existing platform uninstall behavior.
-
-## Embedded Template Layout
-
-Add new templates under `internal/templates/`:
-
-```text
-internal/templates/
-  <lab_name>/
-    <experiment_name>/
-      README.md
-      ...any files/folders
-```
-
-The CLI auto-detects templates without additional code changes.
-
-## Rendering Rules
-
-- Files ending in `.tmpl` are rendered and written without the `.tmpl` suffix.
-- All other files are copied as-is.
-- On Windows, generated files are normalized to CRLF newlines.
-
-## Included 6th Semester IT Lab Dummy Templates
-
-- `bi_lab/exp1_schema_design`
-- `web_lab/exp_typescript_basic`
-- `sensor_lab/exp_sensor_interface`
-- `mad_pwa_lab/exp_flutter_ui`
-- `ds_python_lab/exp_numpy_pandas`
-- `rest_api_lab/exp_go_rest_api`
-- `dummy_exercise`
