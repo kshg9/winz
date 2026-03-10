@@ -10,6 +10,11 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+var (
+	version = "dev"
+	date    = "-"
+)
+
 func main() {
 	g := generator.New(embeddedTemplates)
 	if err := runCLI(g, os.Args[1:]); err != nil {
@@ -19,6 +24,13 @@ func main() {
 }
 
 func runCLI(g *generator.Generator, args []string) error {
+	if len(os.Args) > 1 {
+		if os.Args[1] == "-v" || os.Args[1] == "--version" {
+			fmt.Printf("winz version: %s (%s)\n", version, date)
+			os.Exit(0)
+		}
+	}
+
 	if len(args) == 0 {
 		p := tea.NewProgram(initialModel(g), tea.WithAltScreen())
 		_, err := p.Run()

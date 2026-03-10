@@ -43,6 +43,6 @@ changelog:
 
 release:
   github:
-    owner: kshg9
+    owner: axiahq
     name: winz
   # draft: true   ← uncomment if you want to review before publishing
